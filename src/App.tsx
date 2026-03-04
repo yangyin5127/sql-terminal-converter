@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Terminal,
   ShieldCheck,
-  Settings,
   ArrowRightLeft,
   Copy,
   Download,
@@ -87,9 +86,19 @@ export default function App() {
             <ShieldCheck className="text-sky-600 w-4 h-4" />
             <span className="text-sky-600 text-[10px] font-bold uppercase tracking-wider">Local Only</span>
           </div>
-          {/* <button className="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 hover:bg-slate-200 transition-colors">
-            <Settings className="text-slate-600 w-5 h-5" />
-          </button> */}
+          <a
+            href="https://github.com/yangyin5127/sql-terminal-converter"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open GitHub repository"
+            className="flex items-center justify-center rounded-lg h-10 w-10 bg-transparent hover:bg-transparent transition-colors"
+          >
+            <img
+              src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+              alt="GitHub"
+              className="w-5 h-5"
+            />
+          </a>
         </div>
       </header>
 
