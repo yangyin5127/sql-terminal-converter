@@ -2,6 +2,7 @@
 
 Convert SQL terminal output tables into SQL, CSV, JSON, or Markdown — 100% client-side, no data uploaded.
 
+https://yangyin5127.github.io/sql-terminal-converter
 ## Features
 
 - Parse common SQL terminal-style ASCII tables
