@@ -1,0 +1,5 @@
+{
+  "name": "SQL Terminal Converter",
+  "description": "A local-first tool to convert SQL terminal outputs into various formats like CSV, JSON, and Markdown.",
+  "requestFramePermissions": []
+}
