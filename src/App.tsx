@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Terminal, 
-  ShieldCheck, 
-  Settings, 
-  ArrowRightLeft, 
-  Copy, 
-  Download, 
-  EyeOff, 
-  Wand2, 
-  History,
+import {
+  Terminal,
+  ShieldCheck,
+  Settings,
+  ArrowRightLeft,
+  Copy,
+  Download,
+  EyeOff,
+  Wand2,
+  FileJson,
   CheckCircle2,
   ChevronDown
 } from 'lucide-react';
@@ -27,23 +27,14 @@ export default function App() {
   const [format, setFormat] = useState<ExportFormat>('CSV');
   const [parsedData, setParsedData] = useState<ParsedData>({ headers: [], rows: [] });
   const [copied, setCopied] = useState(false);
-  const [history, setHistory] = useState<{ id: string; timestamp: number; data: ParsedData }[]>([]);
+
+  const [tableName, setTableName] = useState('');
 
   useEffect(() => {
     const data = parseSqlTable(input);
     setParsedData(data);
+    setTableName(''); // Clear table name when input changes
   }, [input]);
-
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('sql_converter_history');
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (e) {
-        console.error('Failed to load history', e);
-      }
-    }
-  }, []);
 
   const handleCopy = () => {
     let text = '';
@@ -51,22 +42,11 @@ export default function App() {
       case 'CSV': text = convertToCSV(parsedData); break;
       case 'JSON': text = convertToJSON(parsedData); break;
       case 'Markdown': text = convertToMarkdown(parsedData); break;
-      case 'SQL': text = convertToSQL(parsedData); break;
+      case 'SQL': text = convertToSQL(parsedData, tableName || 'converted_table'); break;
     }
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-
-    if (parsedData.rows.length > 0) {
-      const newEntry = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: Date.now(),
-        data: parsedData
-      };
-      const updatedHistory = [newEntry, ...history].slice(0, 10);
-      setHistory(updatedHistory);
-      localStorage.setItem('sql_converter_history', JSON.stringify(updatedHistory));
-    }
   };
 
   const handleDownload = () => {
@@ -76,7 +56,7 @@ export default function App() {
       case 'CSV': text = convertToCSV(parsedData); ext = 'csv'; break;
       case 'JSON': text = convertToJSON(parsedData); ext = 'json'; break;
       case 'Markdown': text = convertToMarkdown(parsedData); ext = 'md'; break;
-      case 'SQL': text = convertToSQL(parsedData); ext = 'sql'; break;
+      case 'SQL': text = convertToSQL(parsedData, tableName || 'converted_table'); ext = 'sql'; break;
     }
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -98,8 +78,8 @@ export default function App() {
             <Terminal className="text-sky-600 w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">SQL Converter</h1>
-            <p className="text-xs text-slate-500">v1.0.4 • Local Processing</p>
+            <h1 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">SQL Terminal Converter</h1>
+            <p className="text-xs text-slate-500">v1.0.0 • Local Processing</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -107,9 +87,9 @@ export default function App() {
             <ShieldCheck className="text-sky-600 w-4 h-4" />
             <span className="text-sky-600 text-[10px] font-bold uppercase tracking-wider">Local Only</span>
           </div>
-          <button className="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 hover:bg-slate-200 transition-colors">
+          {/* <button className="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 hover:bg-slate-200 transition-colors">
             <Settings className="text-slate-600 w-5 h-5" />
-          </button>
+          </button> */}
         </div>
       </header>
 
@@ -122,13 +102,13 @@ export default function App() {
                 <ArrowRightLeft className="text-sky-600 w-5 h-5" />
                 <h3 className="font-bold text-lg">Input Terminal Output</h3>
               </div>
-              <div className="flex bg-slate-200 p-1 rounded-lg">
+              {/* <div className="flex bg-slate-200 p-1 rounded-lg">
                 <button className="px-3 py-1 text-xs font-medium rounded bg-white text-slate-900 shadow-sm">MySQL</button>
                 <button className="px-3 py-1 text-xs font-medium rounded text-slate-500 hover:text-slate-900 transition-colors">PostgreSQL</button>
-              </div>
+              </div> */}
             </div>
             <div className="relative flex-1 group min-h-[400px]">
-              <textarea 
+              <textarea
                 className="code-font w-full h-full p-4 rounded-xl border border-slate-200 bg-slate-100 text-slate-800 focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 outline-none resize-none text-sm leading-relaxed"
                 placeholder="+----+-------+----------+
 | id | name  | role     |
@@ -152,18 +132,29 @@ export default function App() {
                 <ArrowRightLeft className="text-sky-600 w-5 h-5 rotate-180" />
                 <h3 className="font-bold text-lg">Converted Result</h3>
               </div>
-              <div className="relative">
-                <select 
-                  className="appearance-none bg-slate-100 border-none rounded-lg text-xs font-bold focus:ring-sky-500 py-2 pl-3 pr-10 cursor-pointer"
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value as ExportFormat)}
-                >
-                  <option value="CSV">CSV Format</option>
-                  <option value="JSON">JSON Array</option>
-                  <option value="Markdown">Markdown Table</option>
-                  <option value="SQL">SQL Inserts</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+              <div className="flex items-center gap-3">
+                {format === 'SQL' && (
+                  <input
+                    type="text"
+                    placeholder="Table name"
+                    className="bg-slate-100 border-none rounded-lg text-xs font-bold focus:ring-sky-500 py-2 px-3 outline-none w-32"
+                    value={tableName}
+                    onChange={(e) => setTableName(e.target.value)}
+                  />
+                )}
+                <div className="relative">
+                  <select
+                    className="appearance-none bg-slate-100 border-none rounded-lg text-xs font-bold focus:ring-sky-500 py-2 pl-3 pr-10 cursor-pointer"
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value as ExportFormat)}
+                  >
+                    <option value="CSV">CSV Format</option>
+                    <option value="JSON">JSON Array</option>
+                    <option value="Markdown">Markdown Table</option>
+                    <option value="SQL">SQL Inserts</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                </div>
               </div>
             </div>
 
@@ -176,14 +167,14 @@ export default function App() {
                   <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={handleCopy}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-sky-100 hover:text-sky-600 transition-all text-xs font-bold"
                   >
                     {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
-                  <button 
+                  <button
                     onClick={handleDownload}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-all text-xs font-bold"
                   >
@@ -193,35 +184,45 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Data Preview Table */}
-              <div className="flex-1 overflow-auto">
+              {/* Data Preview */}
+              <div className="flex-1 overflow-auto bg-slate-50">
                 {parsedData.headers.length > 0 ? (
-                  <table className="w-full text-left border-collapse text-sm">
-                    <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm">
-                      <tr>
-                        {parsedData.headers.map((header) => (
-                          <th key={header} className="p-3 border-b border-slate-200 font-bold text-sky-600">
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="code-font">
-                      {parsedData.rows.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                  format === 'CSV' ? (
+                    <table className="w-full text-left border-collapse text-sm bg-white">
+                      <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                        <tr>
                           {parsedData.headers.map((header) => (
-                            <td key={header} className="p-3 border-b border-slate-100 text-slate-700">
-                              {row[header]}
-                            </td>
+                            <th key={header} className="p-3 border-b border-slate-200 font-bold text-sky-600">
+                              {header}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="code-font">
+                        {parsedData.rows.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            {parsedData.headers.map((header) => (
+                              <td key={header} className="p-3 border-b border-slate-100 text-slate-700">
+                                {row[header]}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="p-4 min-w-max">
+                      <pre className="code-font text-sm text-slate-800 leading-relaxed">
+                        {format === 'JSON' && convertToJSON(parsedData)}
+                        {format === 'Markdown' && convertToMarkdown(parsedData)}
+                        {format === 'SQL' && convertToSQL(parsedData, tableName || 'converted_table')}
+                      </pre>
+                    </div>
+                  )
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 p-10 text-center">
                     <EyeOff className="w-12 h-12 opacity-20" />
-                    <p className="text-sm">No valid SQL table detected.<br/>Paste your terminal output on the left.</p>
+                    <p className="text-sm">No valid SQL table detected.<br />Paste your terminal output on the left.</p>
                   </div>
                 )}
               </div>
@@ -242,7 +243,7 @@ export default function App() {
 
         {/* Features Info */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm"
           >
@@ -250,7 +251,7 @@ export default function App() {
             <h4 className="font-bold text-slate-900 mb-1">Zero Server Calls</h4>
             <p className="text-sm text-slate-600 leading-relaxed">Your data never leaves your browser. Parsing is performed 100% locally in your machine.</p>
           </motion.div>
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm"
           >
@@ -258,13 +259,13 @@ export default function App() {
             <h4 className="font-bold text-slate-900 mb-1">Smart Auto-Detection</h4>
             <p className="text-sm text-slate-600 leading-relaxed">Intelligently detects borders, headers, and null values from common SQL terminal outputs.</p>
           </motion.div>
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm"
           >
-            <History className="text-sky-600 mb-3 w-6 h-6" />
-            <h4 className="font-bold text-slate-900 mb-1">Local History</h4>
-            <p className="text-sm text-slate-600 leading-relaxed">Save your conversion history in local storage for quick access across sessions.</p>
+            <FileJson className="text-sky-600 mb-3 w-6 h-6" />
+            <h4 className="font-bold text-slate-900 mb-1">Multiple Formats</h4>
+            <p className="text-sm text-slate-600 leading-relaxed">Easily export your data to CSV, JSON, Markdown, or SQL Inserts formatted perfectly for your needs.</p>
           </motion.div>
         </div>
       </main>
