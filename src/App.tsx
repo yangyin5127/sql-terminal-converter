@@ -9,7 +9,9 @@ import {
   Wand2,
   FileJson,
   CheckCircle2,
-  ChevronDown
+  ChevronDown,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseSqlTable, convertToCSV, convertToJSON, convertToMarkdown, convertToSQL, ParsedData } from './utils/parser';
@@ -26,6 +28,7 @@ export default function App() {
   const [format, setFormat] = useState<ExportFormat>('CSV');
   const [parsedData, setParsedData] = useState<ParsedData>({ headers: [], rows: [] });
   const [copied, setCopied] = useState(false);
+  const [isFullscreenPreview, setIsFullscreenPreview] = useState(false);
 
   const [tableName, setTableName] = useState('');
 
@@ -34,6 +37,24 @@ export default function App() {
     setParsedData(data);
     setTableName(''); // Clear table name when input changes
   }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFullscreenPreview(false);
+      }
+    };
+
+    if (isFullscreenPreview) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', onKeyDown);
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isFullscreenPreview]);
 
   const handleCopy = () => {
     let text = '';
@@ -67,6 +88,126 @@ export default function App() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const renderOutputPanel = (isFullscreen = false) => (
+    <div className="flex-1 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-slate-50">
+        <div className="flex gap-2 items-center">
+          <div className="w-3 h-3 rounded-full bg-red-400"></div>
+          <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+          <button
+            type="button"
+            onClick={() => setIsFullscreenPreview((prev) => !prev)}
+            className="w-3 h-3 rounded-full bg-emerald-400 hover:scale-110 transition-transform flex items-center justify-center"
+            aria-label={isFullscreen ? 'Exit full-screen preview' : 'Open full-screen preview'}
+            title={isFullscreen ? 'Exit full-screen preview' : 'Open full-screen preview'}
+          >
+            <span className="sr-only">{isFullscreen ? 'Exit full-screen preview' : 'Open full-screen preview'}</span>
+          </button>
+          {isFullscreen && (
+            <span className="ml-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              Full-Screen Preview
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-sky-100 hover:text-sky-600 transition-all text-xs font-bold"
+          >
+            {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-all text-xs font-bold"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download
+          </button>
+          {isFullscreen && (
+            <button
+              type="button"
+              onClick={() => setIsFullscreenPreview(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 transition-all text-xs font-bold"
+              aria-label="Close full-screen preview"
+              title="Close full-screen preview"
+            >
+              <Minimize2 className="w-3.5 h-3.5" />
+              Exit
+            </button>
+          )}
+          {!isFullscreen && (
+            <button
+              type="button"
+              onClick={() => setIsFullscreenPreview(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 transition-all text-xs font-bold"
+              aria-label="Open full-screen preview"
+              title="Open full-screen preview"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              Preview
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Data Preview */}
+      <div className="flex-1 overflow-auto bg-slate-50">
+        {parsedData.headers.length > 0 ? (
+          format === 'CSV' ? (
+            <table className="w-full text-left border-collapse text-sm bg-white">
+              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                <tr>
+                  {parsedData.headers.map((header) => (
+                    <th key={header} className="p-3 border-b border-slate-200 font-bold text-sky-600">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="code-font">
+                {parsedData.rows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    {parsedData.headers.map((header) => (
+                      <td key={header} className="p-3 border-b border-slate-100 text-slate-700">
+                        {row[header]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-4 min-w-max">
+              <pre className="code-font text-sm text-slate-800 leading-relaxed">
+                {format === 'JSON' && convertToJSON(parsedData)}
+                {format === 'Markdown' && convertToMarkdown(parsedData)}
+                {format === 'SQL' && convertToSQL(parsedData, tableName || 'converted_table')}
+              </pre>
+            </div>
+          )
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 p-10 text-center">
+            <EyeOff className="w-12 h-12 opacity-20" />
+            <p className="text-sm">No valid SQL table detected.<br />Paste your terminal output on the left.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Status Bar */}
+      <div className="p-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+          {parsedData.rows.length} rows parsed successfully
+        </p>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></div>
+          <span className="text-[10px] text-sky-600 font-bold uppercase">Ready</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
@@ -166,87 +307,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-
-            <div className="flex-1 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-slate-50">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                  <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                  <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-sky-100 hover:text-sky-600 transition-all text-xs font-bold"
-                  >
-                    {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button
-                    onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-all text-xs font-bold"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download
-                  </button>
-                </div>
-              </div>
-
-              {/* Data Preview */}
-              <div className="flex-1 overflow-auto bg-slate-50">
-                {parsedData.headers.length > 0 ? (
-                  format === 'CSV' ? (
-                    <table className="w-full text-left border-collapse text-sm bg-white">
-                      <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm shadow-sm">
-                        <tr>
-                          {parsedData.headers.map((header) => (
-                            <th key={header} className="p-3 border-b border-slate-200 font-bold text-sky-600">
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="code-font">
-                        {parsedData.rows.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            {parsedData.headers.map((header) => (
-                              <td key={header} className="p-3 border-b border-slate-100 text-slate-700">
-                                {row[header]}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="p-4 min-w-max">
-                      <pre className="code-font text-sm text-slate-800 leading-relaxed">
-                        {format === 'JSON' && convertToJSON(parsedData)}
-                        {format === 'Markdown' && convertToMarkdown(parsedData)}
-                        {format === 'SQL' && convertToSQL(parsedData, tableName || 'converted_table')}
-                      </pre>
-                    </div>
-                  )
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 p-10 text-center">
-                    <EyeOff className="w-12 h-12 opacity-20" />
-                    <p className="text-sm">No valid SQL table detected.<br />Paste your terminal output on the left.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Bar */}
-              <div className="p-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                  {parsedData.rows.length} rows parsed successfully
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></div>
-                  <span className="text-[10px] text-sky-600 font-bold uppercase">Ready</span>
-                </div>
-              </div>
-            </div>
+            {renderOutputPanel()}
           </div>
         </div>
 
@@ -285,6 +346,19 @@ export default function App() {
           © {new Date().getFullYear()} SQL Terminal Converter. Built for developers with privacy in mind.
         </p>
       </footer>
+
+      {isFullscreenPreview && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-900/35 backdrop-blur-sm p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full-screen converted result preview"
+        >
+          <div className="w-full h-full max-w-7xl mx-auto flex">
+            {renderOutputPanel(true)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
