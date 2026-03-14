@@ -2,7 +2,7 @@
 
 Convert SQL terminal output tables into SQL, CSV, JSON, or Markdown — 100% client-side, no data uploaded.
 
-https://tableconvert.pages.dev/
+https://tableconvert.pages.dev
 
 ## Features
 
